@@ -93,8 +93,18 @@ function genShape(kind='auto', diff=2){
 
   const totalUnits = parts.reduce((a,p)=>a+p.units,0);
   // pick a target units between 1 and total-1
-  const targetUnits = Math.max(1, Math.floor(Math.random()*(totalUnits-1)));
+  // On choisit un numérateur divisible par totalUnits / d
+  // pour garantir une fraction atteignable
+  const divs = [];
+  for (let i=1;i<totalUnits;i++){
+    if (totalUnits % i === 0) divs.push(i);
+  }
+  const d = divs[Math.floor(Math.random()*divs.length)];
+  const kmax = Math.floor((totalUnits-1)/d);
+  const n = Math.max(1, Math.floor(Math.random()*kmax));
+  const targetUnits = n * d;
   const target = simplify(targetUnits, totalUnits);
+
   return {type, parts, totalUnits, target, targetUnits};
 }
 
