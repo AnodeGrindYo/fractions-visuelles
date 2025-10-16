@@ -3,52 +3,85 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Fractions Visuelles</title>
+  <title>Fractions — Figures procédurales</title>
   <meta name="theme-color" content="#0e0f12"/>
   <link rel="stylesheet" href="styles.css"/>
+  <script>
+    function setVh(){ document.documentElement.style.setProperty('--vh', (window.innerHeight*0.01) + 'px'); }
+    window.addEventListener('resize', setVh);
+    window.addEventListener('orientationchange', setVh);
+    document.addEventListener('DOMContentLoaded', setVh);
+  </script>
 </head>
 <body>
-  <header class="head">
-    <h1>Fractions Visuelles</h1>
-    <div class="bar">
-      <button id="btnNew">Nouvelle figure</button>
-      <label class="sel">
-        <span>Forme</span>
-        <select id="shapeType">
-          <option value="auto" selected>Auto</option>
-          <option value="triangle">Triangle</option>
-          <option value="square">Carré</option>
-          <option value="hex">Hexagone</option>
-          <option value="circle">Disque</option>
-        </select>
-      </label>
-      <label class="sel">
-        <span>Difficulté</span>
-        <select id="difficulty">
-          <option value="1">Facile</option>
-          <option value="2" selected>Moyen</option>
-          <option value="3">Difficile</option>
-        </select>
-      </label>
+  <div id="app" class="app">
+    <section id="screenStart" class="screen active">
+      <header class="head">
+        <h1>Fractions • Figures procédurales</h1>
+      </header>
+      <main class="start-wrap">
+        <div class="card">
+          <h2>Créer une session</h2>
+          <div class="row">
+            <label class="sel"><span>Forme</span>
+              <select id="shapeType">
+                <option value="auto" selected>Auto</option>
+                <option value="triangle">Triangle</option>
+                <option value="square">Carré</option>
+                <option value="hex">Hexagone</option>
+                <option value="circle">Disque</option>
+              </select>
+            </label>
+          </div>
+          <div class="row">
+            <label class="sel"><span>Difficulté</span>
+              <select id="difficulty">
+                <option value="1">Facile</option>
+                <option value="2" selected>Moyen</option>
+                <option value="3">Difficile</option>
+              </select>
+            </label>
+          </div>
+          <div class="row">
+            <button id="btnStart">Commencer</button>
+          </div>
+        </div>
+      </main>
+      <!-- <footer class="foot"></footer> -->
+    </section>
+
+    <section id="screenGame" class="screen">
+      <header class="head">
+        <button id="btnBack" class="ghost">&larr; Retour</button>
+        <h1>Fractions • Figures</h1>
+      </header>
+      <main class="game-wrap">
+        <section id="prompt" class="card tight"></section>
+        <section id="status" class="card tight"></section>
+        <section id="canvas" class="card grow">
+          <svg id="svg" class="svgshape" viewBox="0 0 1000 1000" aria-label="Figure cliquable"></svg>
+        </section>
+        <section class="card actions tight">
+          <!-- <button id="btnHint" class="secondary">Indice</button> -->
+          <button id="btnCheck">Valider</button>
+        </section>
+      </main>
+      <!-- <footer class="foot"></footer> -->
+    </section>
+
+    <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
+      <div class="modal-backdrop"></div>
+      <div class="modal-sheet" role="document">
+        <div class="modal-icon" id="modalIcon">🎉</div>
+        <h3 id="modalTitle">Bravo !</h3>
+        <p id="modalMsg">Tu as colorié exactement la fraction demandée.</p>
+        <div class="modal-actions">
+          <button id="btnClose" class="secondary">Fermer</button>
+          <button id="btnNext" class="primary">Suivant</button>
+        </div>
+      </div>
     </div>
-  </header>
-
-  <main class="wrap">
-    <section id="prompt" class="card"></section>
-    <section id="status" class="card"></section>
-    <section id="canvas" class="card">
-      <svg id="svg" class="svgshape" viewBox="0 0 1000 1000" aria-label="Figure cliquable"></svg>
-    </section>
-    <section class="card actions">
-      <button id="btnHint" class="secondary">Indice</button>
-      <button id="btnCheck">Valider</button>
-      <button id="btnNext" class="secondary">Suivant</button>
-      <p id="feedback" class="feedback" aria-live="polite"></p>
-    </section>
-  </main>
-
-  <footer class="foot"></footer>
-
+  </div>
   <script type="module" src="app.js"></script>
 </body>
 </html>

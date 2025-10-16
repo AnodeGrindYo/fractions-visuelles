@@ -1,16 +1,37 @@
-// app.js — génération procédurale + suivi de la somme sélectionnée
-// Fonctions utilitaires arithmétiques
+// app.js — écrans + modal + génération procédurale responsive
 function gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b){ const t=b; b=a%b; a=t;} return a||1; }
 function simplify(n,d){ const g=gcd(n,d); const s = d<0?-1:1; return {n:(n/g)*s, d:Math.abs(d)/g}; }
-
-// Palette simple stable par nombre (pour la sélection)
-const NUM_PALETTE = ['#377eb8','#e41a1c','#4daf4a','#984ea3','#ff7f00','#a6cee3','#f781bf','#999999','#66d9ef','#dede00','#8dd3c7','#bebada'];
+const dysPalette = ['#2E86AB','#F18F01','#4CB944','#7A5CFF','#EF476F','#06D6A0','#FFB703','#118AB2'];
 const denNeutral = getComputedStyle(document.documentElement).getPropertyValue('--den') || '#b7bec9';
-function colorFor(n){ if(!Number.isFinite(n)||n<=0) return denNeutral; return NUM_PALETTE[(Math.abs(Math.trunc(n))-1)%NUM_PALETTE.length]; }
+const $ = (s)=>document.querySelector(s);
 
-// ---------- Subdivision helpers (SVG polygons) ----------
+const els = {
+  screenStart: $('#screenStart'),
+  screenGame: $('#screenGame'),
+  btnStart: $('#btnStart'),
+  btnBack: $('#btnBack'),
+  prompt: $('#prompt'),
+  status: $('#status'),
+  svg: $('#svg'),
+  btnCheck: $('#btnCheck'),
+  btnNext: $('#btnNext'),
+  modal: $('#modal'),
+  modalTitle: $('#modalTitle'),
+  modalMsg: $('#modalMsg'),
+  modalIcon: $('#modalIcon'),
+  btnClose: $('#btnClose'),
+  shapeType: $('#shapeType'),
+  difficulty: $('#difficulty')
+};
+
+let current = { spec:null, fillColor:'#377eb8', targetUnits:0 };
+
+function pickFillColor(){ return dysPalette[Math.floor(Math.random()*dysPalette.length)]; }
+function tokenNum(v,color){ return `<b style="color:${color||current.fillColor}">${v}</b>`; }
+function tokenDen(v){ return `<b style="color:${denNeutral}">${v}</b>`; }
+
+// Subdivision funcs
 function mid(a,b){ return [(a[0]+b[0])/2,(a[1]+b[1])/2]; }
-
 function subdivTriangle(tri, depth=1, partial=true, weight=1){
   const res=[];
   function rec(t, d, w){
@@ -25,7 +46,6 @@ function subdivTriangle(tri, depth=1, partial=true, weight=1){
   rec(tri, depth, 1);
   return res;
 }
-
 function subdivSquare(square, depth=1, partial=true){
   const res=[];
   function rec(rect, d, w){
@@ -42,7 +62,6 @@ function subdivSquare(square, depth=1, partial=true){
   rec(square, depth, 1);
   return res;
 }
-
 function subdivHexagon(hex, depth=1, partial=true){
   const res=[];
   const center = hex.reduce((a,p)=>[a[0]+p[0]/6,a[1]+p[1]/6],[0,0]);
@@ -52,7 +71,6 @@ function subdivHexagon(hex, depth=1, partial=true){
   }
   return res;
 }
-
 function sectorPolygon(cx,cy,r,a1,a2,steps=10){
   const pts=[[cx,cy]];
   for(let i=0;i<=steps;i++){
@@ -76,9 +94,16 @@ function subdivCircle(cx,cy,r, sectors=6, depth=1, partial=true){
   }
   return res;
 }
-
-function genShape(kind='auto', diff=2){
-  const pad=60;
+function pickReachableTarget(totalUnits){
+  const divisors = [];
+  for(let i=1;i<totalUnits;i++){ if(totalUnits % i === 0) divisors.push(i); }
+  const d = divisors[Math.floor(Math.random()*divisors.length)] || 1;
+  const kmax = Math.floor((totalUnits-1)/d);
+  const n = Math.max(1, Math.floor(Math.random()*kmax));
+  const units = n*d;
+  return {units, frac:simplify(units, totalUnits)};
+}
+function genShape(kind, diff){
   const tri=[[500, 60],[940,940],[60,940]];
   const sq =[[60,60],[940,60],[940,940],[60,940]];
   const hex=[]; for(let i=0;i<6;i++){ const a=Math.PI/6 + i*Math.PI/3; hex.push([500 + 410*Math.cos(a), 500 + 410*Math.sin(a)]); }
@@ -90,80 +115,51 @@ function genShape(kind='auto', diff=2){
   else if(type==='square') parts = subdivSquare(sq, depth, partial);
   else if(type==='hex') parts = subdivHexagon(hex, depth, partial);
   else parts = subdivCircle(500,500, 430, 6, diff===3?2:1, partial);
-
   const totalUnits = parts.reduce((a,p)=>a+p.units,0);
-  // pick a target units between 1 and total-1
-  // On choisit un numérateur divisible par totalUnits / d
-  // pour garantir une fraction atteignable
-  const divs = [];
-  for (let i=1;i<totalUnits;i++){
-    if (totalUnits % i === 0) divs.push(i);
-  }
-  const d = divs[Math.floor(Math.random()*divs.length)];
-  const kmax = Math.floor((totalUnits-1)/d);
-  const n = Math.max(1, Math.floor(Math.random()*kmax));
-  const targetUnits = n * d;
-  const target = simplify(targetUnits, totalUnits);
-
-  return {type, parts, totalUnits, target, targetUnits};
+  const tgt = pickReachableTarget(totalUnits);
+  return {type, parts, totalUnits, target: tgt.frac, targetUnits: tgt.units};
 }
 
-// ---------- Rendering & interaction ----------
-const els = {
-  prompt: document.getElementById('prompt'),
-  status: document.getElementById('status'),
-  svg: document.getElementById('svg'),
-  btnNew: document.getElementById('btnNew'),
-  btnHint: document.getElementById('btnHint'),
-  btnCheck: document.getElementById('btnCheck'),
-  btnNext: document.getElementById('btnNext'),
-  feedback: document.getElementById('feedback'),
-  shapeType: document.getElementById('shapeType'),
-  difficulty: document.getElementById('difficulty')
-};
+// Screens
+function showScreen(which){
+  els.screenStart.classList.toggle('active', which==='start');
+  els.screenGame.classList.toggle('active', which==='game');
+}
 
-let current = null;
-
-function tokenNum(v){ return `<b style="color:${colorFor(Number(v))}">${v}</b>`; }
-function tokenDen(v){ return `<b style="color:${denNeutral}">${v}</b>`; }
-
+// Render
 function render(spec){
-  current = {spec};
-  els.prompt.innerHTML = `Colorie ${tokenNum(spec.target.n)}<span class="sep">/</span>${tokenDen(spec.target.d)} de la figure.`;
-  els.svg.innerHTML='';
-  els.feedback.textContent='';
-  // draw parts
-  spec.parts.forEach((p,idx)=>{
+  current.spec = spec;
+  current.fillColor = pickFillColor();
+  current.targetUnits = spec.targetUnits;
+  els.prompt.innerHTML = `Colorie <b style="color:${current.fillColor}">${spec.target.n}</b>/<b style="color:${denNeutral}">${spec.target.d}</b> de la figure.`;
+  els.svg.innerHTML = '';
+  spec.parts.forEach(p=>{
     const path = document.createElementNS('http://www.w3.org/2000/svg','path');
     const d = p.pts.map((pt,i)=> (i===0?'M':'L')+pt[0]+' '+pt[1]).join(' ') + ' Z';
     path.setAttribute('d', d);
     path.setAttribute('fill', 'white');
     path.setAttribute('stroke', '#111');
-    path.setAttribute('stroke-width', '4');
+    const sw = window.innerWidth < 600 ? 12 : 18;
+    path.setAttribute('stroke-width', String(sw)/2);
     path.classList.add('part');
     path.dataset.units = String(p.units);
     path.dataset.sel = '0';
     path.addEventListener('click', ()=>{
-      const sel = path.dataset.sel==='1';
-      path.dataset.sel = sel ? '0':'1';
-      updateFill(path);
-      updateStatus();
+      path.dataset.sel = (path.dataset.sel==='1') ? '0' : '1';
+      updateFill(path); updateStatus();
     });
     els.svg.appendChild(path);
     updateFill(path);
   });
   updateStatus();
 }
-
 function updateFill(path){
   const isSel = path.dataset.sel==='1';
-  path.setAttribute('fill', isSel ? colorFor(1) : 'white');
+  path.setAttribute('fill', isSel ? current.fillColor : 'white');
 }
-
 function currentSelectionUnits(){
   return Array.from(els.svg.querySelectorAll('.part')).reduce((a,p)=> a + (p.dataset.sel==='1'? parseInt(p.dataset.units,10):0), 0);
 }
-
 function updateStatus(){
   const sel = currentSelectionUnits();
   const tot = current.spec.totalUnits;
@@ -171,13 +167,49 @@ function updateStatus(){
   const rem = Math.max(0, tgtU - sel);
   const fSel = simplify(sel, tot);
   const fRem = simplify(rem, tot);
-  const fTgt = simplify(tgtU, tot);
+  const fTgt = current.spec.target;
   els.status.innerHTML = `<div class="status-badges">
-    <span class="badge">Cible : ${tokenNum(fTgt.n)}/${tokenDen(fTgt.d)}</span>
-    <span class="badge">Sélectionné : ${tokenNum(fSel.n)}/${tokenDen(fSel.d)}</span>
-    <span class="badge">Reste : ${tokenNum(fRem.n)}/${tokenDen(fRem.d)}</span>
+    <span class="badge">Cible : <b style="color:${current.fillColor}">${fTgt.n}</b>/<b style="color:${denNeutral}">${fTgt.d}</b></span>
+    <span class="badge">Sélectionné : <b style="color:${current.fillColor}">${fSel.n}</b>/<b style="color:${denNeutral}">${fSel.d}</b></span>
+    <span class="badge">Reste : <b style="color:${current.fillColor}">${fRem.n}</b>/<b style="color:${denNeutral}">${fRem.d}</b></span>
   </div>`;
 }
+
+// Modal
+function openModal(ok){
+  els.modal.classList.add('show');
+  els.modal.setAttribute('aria-hidden','false');
+  if(ok){
+    $('#modalIcon').textContent = '🎉';
+    $('#modalTitle').textContent = 'Félicitations !';
+    $('#modalMsg').textContent = 'Exact : tu as colorié la fraction demandée.';
+    $('#btnNext').style.display = 'inline-block';
+  }else{
+    $('#modalIcon').textContent = '🤔';
+    $('#modalTitle').textContent = 'Pas encore';
+    $('#modalMsg').textContent = 'Ajuste la sélection pour atteindre la cible.';
+    $('#btnNext').style.display = 'none';
+  }
+}
+function closeModal(advanceIfOk){
+  const wasOk = $('#btnNext').style.display !== 'none';
+  els.modal.classList.remove('show');
+  els.modal.setAttribute('aria-hidden','true');
+  if(advanceIfOk && wasOk){
+    generate();
+  }
+}
+
+// Events
+els.btnStart.addEventListener('click', ()=>{ showScreen('game'); generate(); });
+els.btnBack.addEventListener('click', ()=>{ showScreen('start'); });
+
+els.btnCheck.addEventListener('click', ()=>{
+  const ok = currentSelectionUnits() === current.targetUnits;
+  openModal(ok);
+});
+$('#btnClose').addEventListener('click', ()=> closeModal(true));
+$('#btnNext').addEventListener('click', ()=> closeModal(true));
 
 function generate(){
   const kind = els.shapeType.value;
@@ -186,22 +218,5 @@ function generate(){
   render(spec);
 }
 
-els.btnNew.addEventListener('click', generate);
-els.btnNext.addEventListener('click', generate);
-els.btnHint.addEventListener('click', ()=>{
-  els.feedback.className='feedback';
-  // hint: si sélection trop grande/petite
-  const sel = currentSelectionUnits(), tgt = current.spec.targetUnits;
-  if(sel < tgt) els.feedback.textContent = "Indice : il manque encore des zones à colorier.";
-  else if(sel > tgt) els.feedback.textContent = "Indice : tu as colorié trop de zones, enlève-en.";
-  else els.feedback.textContent = "Parfait : tu as la bonne quantité.";
-});
-els.btnCheck.addEventListener('click', ()=>{
-  const ok = currentSelectionUnits() === current.spec.targetUnits;
-  els.feedback.className = 'feedback ' + (ok?'ok':'err');
-  els.feedback.textContent = ok ? "Exact : tu as colorié exactement la fraction demandée." : "Pas encore. Ajuste ta sélection pour atteindre la cible.";
-  if(ok){ /* auto-next UX nice touch could be added here */ }
-});
-
-// init
-generate();
+// Init
+showScreen('start');
