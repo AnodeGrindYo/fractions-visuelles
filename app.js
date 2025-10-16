@@ -220,7 +220,7 @@ function render(spec){
     path.setAttribute('fill', 'white');
     path.setAttribute('stroke', '#111');
     const sw = window.innerWidth < 600 ? 12 : 18;
-    path.setAttribute('stroke-width', String(sw)); // <-- corrigé (pas de /2)
+    path.setAttribute('stroke-width', String(sw)/2); // <-- corrigé (pas de /2)
     path.classList.add('part');
     path.dataset.units = String(p.units);
     path.dataset.sel = '0';
