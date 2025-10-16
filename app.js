@@ -21,8 +21,30 @@ const els = {
   modalIcon: $('#modalIcon'),
   btnClose: $('#btnClose'),
   shapeType: $('#shapeType'),
-  difficulty: $('#difficulty')
+  difficulty: $('#difficulty'),
+  btnExitFs: $('#btnExitFs'),
 };
+
+// Détection mobile simple
+const isMobile = () =>
+  /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+
+// API plein écran (avec préfixes)
+const rqfs = el =>
+  (el.requestFullscreen?.call(el) ||
+   el.webkitRequestFullscreen?.call(el) ||
+   el.msRequestFullscreen?.call(el)) ?? Promise.reject();
+
+const exfs = () =>
+  (document.exitFullscreen?.call(document) ||
+   document.webkitExitFullscreen?.call(document) ||
+   document.msExitFullscreen?.call(document));
+
+const inFs = () =>
+  !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+
+// État du flux plein écran
+const fs = { armed:false, active:false, firstTapHandler:null };
 
 let current = { spec:null, fillColor:'#377eb8', targetUnits:0 };
 
@@ -126,6 +148,47 @@ function showScreen(which){
   els.screenGame.classList.toggle('active', which==='game');
 }
 
+function updateFsUI(){
+  // Le bouton discret n’apparaît qu’en plein écran
+  if (els.btnExitFs) els.btnExitFs.hidden = !inFs();
+}
+
+function armFirstTapFullscreen(){
+  // Ne s’applique qu’en mobile + écran de jeu actif
+  fs.armed = isMobile() && els.screenGame.classList.contains('active') && !inFs();
+  updateFsUI();
+
+  // Nettoie tout ancien handler
+  if (fs.firstTapHandler){
+    els.screenGame.removeEventListener('pointerdown', fs.firstTapHandler, true);
+    fs.firstTapHandler = null;
+  }
+
+  if (!fs.armed) return;
+
+  // Capture le tout premier pointerdown pour demander le plein écran
+  fs.firstTapHandler = (e) => {
+    if (!fs.armed || inFs()) return;
+    // Empêche que ce premier tap clique la figure
+    e.preventDefault();
+    e.stopPropagation();
+
+    rqfs(document.documentElement) // on peut aussi viser #app
+      ?.then(()=> { fs.active = true; fs.armed = false; updateFsUI(); })
+      .catch(()=> { fs.active = false; fs.armed = false; updateFsUI(); })
+      .finally(()=>{
+        // On n’écoute plus ce 1er tap; le suivant sera un tap “normal”
+        if (fs.firstTapHandler){
+          els.screenGame.removeEventListener('pointerdown', fs.firstTapHandler, true);
+          fs.firstTapHandler = null;
+        }
+      });
+  };
+
+  els.screenGame.addEventListener('pointerdown', fs.firstTapHandler, true);
+}
+
+
 // Render
 function render(spec){
   current.spec = spec;
@@ -201,7 +264,11 @@ function closeModal(advanceIfOk){
 }
 
 // Events
-els.btnStart.addEventListener('click', ()=>{ showScreen('game'); generate(); });
+els.btnStart.addEventListener('click', ()=>{ 
+  showScreen('game'); 
+  generate(); 
+  armFirstTapFullscreen();
+});
 els.btnBack.addEventListener('click', ()=>{ showScreen('start'); });
 
 els.btnCheck.addEventListener('click', ()=>{
@@ -210,6 +277,27 @@ els.btnCheck.addEventListener('click', ()=>{
 });
 $('#btnClose').addEventListener('click', ()=> closeModal(true));
 $('#btnNext').addEventListener('click', ()=> closeModal(true));
+
+// Bouton “quitter plein écran”
+if (els.btnExitFs){
+  els.btnExitFs.addEventListener('click', () => {
+    exfs();
+  });
+}
+
+// Sync UI quand on entre/sort du plein écran
+document.addEventListener('fullscreenchange', () => {
+  fs.active = inFs();
+  // Si on quitte, on réarme le “premier tap”
+  if (!fs.active) armFirstTapFullscreen();
+  updateFsUI();
+});
+document.addEventListener('webkitfullscreenchange', () => {
+  fs.active = inFs();
+  if (!fs.active) armFirstTapFullscreen();
+  updateFsUI();
+});
+
 
 function generate(){
   const kind = els.shapeType.value;

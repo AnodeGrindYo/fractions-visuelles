@@ -68,3 +68,22 @@ button.primary{background:var(--accent); color:#081018}
   margin-top: 12px;
 }
 
+/* Bouton discret pour quitter le plein écran */
+.fs-exit[hidden]{ display:none; }
+.fs-exit{
+  position: fixed;
+  top: max(8px, env(safe-area-inset-top));
+  right: max(8px, env(safe-area-inset-right));
+  z-index: 60;
+  background: rgba(0,0,0,.55);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 999px;
+  padding: .35rem .5rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+.fs-exit:hover{ background: rgba(0,0,0,.7); }
+
