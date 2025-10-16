@@ -30,16 +30,32 @@ const isMobile = () =>
   /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
 
 // API plein écran (avec préfixes)
-const rqfs = el =>
-  (el.requestFullscreen?.call(el) ||
-   el.webkitRequestFullscreen?.call(el) ||
-   el.msRequestFullscreen?.call(el)) ?? Promise.reject();
-
-const exfs = () =>
-  (document.exitFullscreen?.call(document) ||
-   document.webkitExitFullscreen?.call(document) ||
-   document.msExitFullscreen?.call(document));
-
+function fsSupported(){
+  const el = document.documentElement;
+  return !!(
+    document.fullscreenEnabled ||
+    document.webkitFullscreenEnabled ||
+    el.requestFullscreen ||
+    el.webkitRequestFullscreen ||
+    el.msRequestFullscreen
+  );
+}
+function rqfs(el){
+  try{
+    if (el.requestFullscreen) return el.requestFullscreen({ navigationUI: "hide" });
+    if (el.webkitRequestFullscreen){ el.webkitRequestFullscreen(); return Promise.resolve(); } // iOS
+    if (el.msRequestFullscreen){ el.msRequestFullscreen(); return Promise.resolve(); }
+  }catch(e){ return Promise.reject(e); }
+  return Promise.reject(new Error('FS not available'));
+}
+const exfs = () => {
+  try{
+    if (document.exitFullscreen) return document.exitFullscreen();
+    if (document.webkitExitFullscreen){ document.webkitExitFullscreen(); return Promise.resolve(); }
+    if (document.msExitFullscreen){ document.msExitFullscreen(); return Promise.resolve(); }
+  }catch(e){ return Promise.reject(e); }
+  return Promise.resolve();
+};
 const inFs = () =>
   !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
 
@@ -154,38 +170,39 @@ function updateFsUI(){
 }
 
 function armFirstTapFullscreen(){
-  // Ne s’applique qu’en mobile + écran de jeu actif
-  fs.armed = isMobile() && els.screenGame.classList.contains('active') && !inFs();
+  // Ne s’applique qu’en mobile + FS dispo + écran de jeu actif
+  fs.armed = isMobile() && fsSupported() && els.screenGame.classList.contains('active') && !inFs();
   updateFsUI();
 
   // Nettoie tout ancien handler
   if (fs.firstTapHandler){
-    els.screenGame.removeEventListener('pointerdown', fs.firstTapHandler, true);
+    els.screenGame.removeEventListener('click', fs.firstTapHandler, {capture:true});
     fs.firstTapHandler = null;
   }
 
   if (!fs.armed) return;
 
-  // Capture le tout premier pointerdown pour demander le plein écran
+  // Capture le tout premier click pour demander le plein écran (iOS friendly)
   fs.firstTapHandler = (e) => {
     if (!fs.armed || inFs()) return;
     // Empêche que ce premier tap clique la figure
     e.preventDefault();
     e.stopPropagation();
 
-    rqfs(document.documentElement) // on peut aussi viser #app
-      ?.then(()=> { fs.active = true; fs.armed = false; updateFsUI(); })
+    const targetEl = document.getElementById('app') || document.documentElement;
+    rqfs(targetEl)
+      .then(()=> { fs.active = true; fs.armed = false; updateFsUI(); })
       .catch(()=> { fs.active = false; fs.armed = false; updateFsUI(); })
       .finally(()=>{
         // On n’écoute plus ce 1er tap; le suivant sera un tap “normal”
         if (fs.firstTapHandler){
-          els.screenGame.removeEventListener('pointerdown', fs.firstTapHandler, true);
+          els.screenGame.removeEventListener('click', fs.firstTapHandler, {capture:true});
           fs.firstTapHandler = null;
         }
       });
   };
 
-  els.screenGame.addEventListener('pointerdown', fs.firstTapHandler, true);
+  els.screenGame.addEventListener('click', fs.firstTapHandler, {capture:true, passive:false});
 }
 
 
@@ -203,7 +220,7 @@ function render(spec){
     path.setAttribute('fill', 'white');
     path.setAttribute('stroke', '#111');
     const sw = window.innerWidth < 600 ? 12 : 18;
-    path.setAttribute('stroke-width', String(sw)/2);
+    path.setAttribute('stroke-width', String(sw)); // <-- corrigé (pas de /2)
     path.classList.add('part');
     path.dataset.units = String(p.units);
     path.dataset.sel = '0';
@@ -269,7 +286,10 @@ els.btnStart.addEventListener('click', ()=>{
   generate(); 
   armFirstTapFullscreen();
 });
-els.btnBack.addEventListener('click', ()=>{ showScreen('start'); });
+els.btnBack.addEventListener('click', ()=>{ 
+  if (inFs()) exfs(); 
+  showScreen('start'); 
+});
 
 els.btnCheck.addEventListener('click', ()=>{
   const ok = currentSelectionUnits() === current.targetUnits;
