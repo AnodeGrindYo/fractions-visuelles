@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Fractions Visuelles</title>
+  <meta name="theme-color" content="#0e0f12"/>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <header class="head">
+    <h1>Fractions Visuelles</h1>
+    <div class="bar">
+      <button id="btnNew">Nouvelle figure</button>
+      <label class="sel">
+        <span>Forme</span>
+        <select id="shapeType">
+          <option value="auto" selected>Auto</option>
+          <option value="triangle">Triangle</option>
+          <option value="square">Carré</option>
+          <option value="hex">Hexagone</option>
+          <option value="circle">Disque</option>
+        </select>
+      </label>
+      <label class="sel">
+        <span>Difficulté</span>
+        <select id="difficulty">
+          <option value="1">Facile</option>
+          <option value="2" selected>Moyen</option>
+          <option value="3">Difficile</option>
+        </select>
+      </label>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="prompt" class="card"></section>
+    <section id="status" class="card"></section>
+    <section id="canvas" class="card">
+      <svg id="svg" class="svgshape" viewBox="0 0 1000 1000" aria-label="Figure cliquable"></svg>
+    </section>
+    <section class="card actions">
+      <button id="btnHint" class="secondary">Indice</button>
+      <button id="btnCheck">Valider</button>
+      <button id="btnNext" class="secondary">Suivant</button>
+      <p id="feedback" class="feedback" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <footer class="foot"></footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

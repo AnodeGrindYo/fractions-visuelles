@@ -1,0 +1,26 @@
+*{box-sizing:border-box}
+:root{
+  --bg:#0e0f12; --ink:#eef1f5; --muted:#aab3c2; --card:#171922;
+  --accent:#66d9ef; --ok:#53d769; --err:#ff3b30; --den:#b7bec9;
+}
+html,body{height:100%}
+body{margin:0; background:var(--bg); color:var(--ink); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+.head{padding:12px; border-bottom:1px solid #222; background:#0a0b0e}
+.head h1{margin:0; font-size:1.05rem}
+.bar{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px}
+.sel{display:flex; gap:6px; align-items:center}
+.wrap{max-width:920px; margin:0 auto; padding:12px; display:grid; gap:12px}
+.card{background:var(--card); border:1px solid #262a36; border-radius:12px; padding:12px}
+#prompt{font-size:1.1rem}
+.status-badges{display:flex; gap:8px; flex-wrap:wrap}
+.badge{display:inline-block; padding:.25rem .5rem; border:1px solid #2b3140; border-radius:999px; background:#0d0f15}
+.badge b{font-weight:800}
+.svgshape{width:100%; height:auto; display:block}
+.part{cursor:pointer; transition:fill .15s ease, opacity .15s ease}
+.part:hover{opacity:.92}
+.actions{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+button{background:var(--accent); color:#081018; border:none; border-radius:10px; padding:.6rem .9rem; font-weight:700; cursor:pointer}
+button.secondary{background:#2b3140; color:var(--ink)}
+.feedback{min-height:1.2em}
+.ok{color:var(--ok)} .err{color:var(--err)}
+@media (max-width:600px){ .wrap{padding:8px} }
