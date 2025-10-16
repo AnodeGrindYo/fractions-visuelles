@@ -139,7 +139,7 @@ function render(spec){
     path.setAttribute('d', d);
     path.setAttribute('fill', 'white');
     path.setAttribute('stroke', '#111');
-    path.setAttribute('stroke-width', '18');
+    path.setAttribute('stroke-width', '4');
     path.classList.add('part');
     path.dataset.units = String(p.units);
     path.dataset.sel = '0';
