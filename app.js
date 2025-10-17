@@ -13,7 +13,6 @@ const els = {
   prompt: $('#prompt'),
   status: $('#status'),
   svg: $('#svg'),
-  btnHint: $('#btnHint'),
   btnCheck: $('#btnCheck'),
   btnNext: $('#btnNext'),
   modal: $('#modal'),
@@ -22,8 +21,46 @@ const els = {
   modalIcon: $('#modalIcon'),
   btnClose: $('#btnClose'),
   shapeType: $('#shapeType'),
-  difficulty: $('#difficulty')
+  difficulty: $('#difficulty'),
+  btnExitFs: $('#btnExitFs'),
 };
+
+// Détection mobile simple
+const isMobile = () =>
+  /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+
+// API plein écran (avec préfixes)
+function fsSupported(){
+  const el = document.documentElement;
+  return !!(
+    document.fullscreenEnabled ||
+    document.webkitFullscreenEnabled ||
+    el.requestFullscreen ||
+    el.webkitRequestFullscreen ||
+    el.msRequestFullscreen
+  );
+}
+function rqfs(el){
+  try{
+    if (el.requestFullscreen) return el.requestFullscreen({ navigationUI: "hide" });
+    if (el.webkitRequestFullscreen){ el.webkitRequestFullscreen(); return Promise.resolve(); } // iOS
+    if (el.msRequestFullscreen){ el.msRequestFullscreen(); return Promise.resolve(); }
+  }catch(e){ return Promise.reject(e); }
+  return Promise.reject(new Error('FS not available'));
+}
+const exfs = () => {
+  try{
+    if (document.exitFullscreen) return document.exitFullscreen();
+    if (document.webkitExitFullscreen){ document.webkitExitFullscreen(); return Promise.resolve(); }
+    if (document.msExitFullscreen){ document.msExitFullscreen(); return Promise.resolve(); }
+  }catch(e){ return Promise.reject(e); }
+  return Promise.resolve();
+};
+const inFs = () =>
+  !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+
+// État du flux plein écran
+const fs = { armed:false, active:false, firstTapHandler:null };
 
 let current = { spec:null, fillColor:'#377eb8', targetUnits:0 };
 
@@ -127,6 +164,48 @@ function showScreen(which){
   els.screenGame.classList.toggle('active', which==='game');
 }
 
+function updateFsUI(){
+  // Le bouton discret n’apparaît qu’en plein écran
+  if (els.btnExitFs) els.btnExitFs.hidden = !inFs();
+}
+
+function armFirstTapFullscreen(){
+  // Ne s’applique qu’en mobile + FS dispo + écran de jeu actif
+  fs.armed = isMobile() && fsSupported() && els.screenGame.classList.contains('active') && !inFs();
+  updateFsUI();
+
+  // Nettoie tout ancien handler
+  if (fs.firstTapHandler){
+    els.screenGame.removeEventListener('click', fs.firstTapHandler, {capture:true});
+    fs.firstTapHandler = null;
+  }
+
+  if (!fs.armed) return;
+
+  // Capture le tout premier click pour demander le plein écran (iOS friendly)
+  fs.firstTapHandler = (e) => {
+    if (!fs.armed || inFs()) return;
+    // Empêche que ce premier tap clique la figure
+    e.preventDefault();
+    e.stopPropagation();
+
+    const targetEl = document.getElementById('app') || document.documentElement;
+    rqfs(targetEl)
+      .then(()=> { fs.active = true; fs.armed = false; updateFsUI(); })
+      .catch(()=> { fs.active = false; fs.armed = false; updateFsUI(); })
+      .finally(()=>{
+        // On n’écoute plus ce 1er tap; le suivant sera un tap “normal”
+        if (fs.firstTapHandler){
+          els.screenGame.removeEventListener('click', fs.firstTapHandler, {capture:true});
+          fs.firstTapHandler = null;
+        }
+      });
+  };
+
+  els.screenGame.addEventListener('click', fs.firstTapHandler, {capture:true, passive:false});
+}
+
+
 // Render
 function render(spec){
   current.spec = spec;
@@ -141,7 +220,7 @@ function render(spec){
     path.setAttribute('fill', 'white');
     path.setAttribute('stroke', '#111');
     const sw = window.innerWidth < 600 ? 12 : 18;
-    path.setAttribute('stroke-width', String(sw));
+    path.setAttribute('stroke-width', String(sw)/4);
     path.classList.add('part');
     path.dataset.units = String(p.units);
     path.dataset.sel = '0';
@@ -174,6 +253,20 @@ function updateStatus(){
     <span class="badge">Sélectionné : <b style="color:${current.fillColor}">${fSel.n}</b>/<b style="color:${denNeutral}">${fSel.d}</b></span>
     <span class="badge">Reste : <b style="color:${current.fillColor}">${fRem.n}</b>/<b style="color:${denNeutral}">${fRem.d}</b></span>
   </div>`;
+
+  // Effet visuel quand la fraction correcte est atteinte (avant validation)
+  const allParts = els.svg.querySelectorAll('.part');
+
+  if (sel === tgtU) {
+    // Active la pulsation sur les parties sélectionnées
+    allParts.forEach(p => {
+      if (p.dataset.sel === '1') p.classList.add('pulse-correct');
+      else p.classList.remove('pulse-correct');
+    });
+  } else {
+    // Retire l'effet si ce n'est plus correct
+    allParts.forEach(p => p.classList.remove('pulse-correct'));
+  }
 }
 
 // Modal
@@ -202,18 +295,43 @@ function closeModal(advanceIfOk){
 }
 
 // Events
-els.btnStart.addEventListener('click', ()=>{ showScreen('game'); generate(); });
-els.btnBack.addEventListener('click', ()=>{ showScreen('start'); });
-els.btnHint.addEventListener('click', ()=>{
-  const sel = currentSelectionUnits(), tgt = current.targetUnits;
-  openModal(sel===tgt);
+els.btnStart.addEventListener('click', ()=>{ 
+  showScreen('game'); 
+  generate(); 
+  armFirstTapFullscreen();
 });
+els.btnBack.addEventListener('click', ()=>{ 
+  if (inFs()) exfs(); 
+  showScreen('start'); 
+});
+
 els.btnCheck.addEventListener('click', ()=>{
   const ok = currentSelectionUnits() === current.targetUnits;
   openModal(ok);
 });
 $('#btnClose').addEventListener('click', ()=> closeModal(true));
 $('#btnNext').addEventListener('click', ()=> closeModal(true));
+
+// Bouton “quitter plein écran”
+if (els.btnExitFs){
+  els.btnExitFs.addEventListener('click', () => {
+    exfs();
+  });
+}
+
+// Sync UI quand on entre/sort du plein écran
+document.addEventListener('fullscreenchange', () => {
+  fs.active = inFs();
+  // Si on quitte, on réarme le “premier tap”
+  if (!fs.active) armFirstTapFullscreen();
+  updateFsUI();
+});
+document.addEventListener('webkitfullscreenchange', () => {
+  fs.active = inFs();
+  if (!fs.active) armFirstTapFullscreen();
+  updateFsUI();
+});
+
 
 function generate(){
   const kind = els.shapeType.value;
