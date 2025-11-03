@@ -1,88 +1,67 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Fractions — Figures procédurales</title>
-  <meta name="theme-color" content="#0e0f12"/>
-  <link rel="stylesheet" href="styles.css"/>
-  <script>
-    function setVh(){ document.documentElement.style.setProperty('--vh', (window.innerHeight*0.01) + 'px'); }
-    window.addEventListener('resize', setVh);
-    window.addEventListener('orientationchange', setVh);
-    document.addEventListener('DOMContentLoaded', setVh);
-  </script>
+  <meta charset="utf-8">
+  <title>Fractions Visuelles — Exercices</title>
+  <meta name="description" content="Exercices visuels de fractions pour dyscalculiques.">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  <!--
+    styles.css contient les règles visuelles.
+    Les commentaires ci-dessous expliquent les éléments clés :
+    - #exercise-display : zone où la représentation graphique est insérée.
+    - .fraction-visual : conteneur des SVG/éléments visuels.
+    - boutons et contrôles : id btn-new, select-mode.
+  -->
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div id="app" class="app">
-    <section id="screenStart" class="screen active">
-      <header class="head">
-        <h1>Fractions • Figures procédurales</h1>
-      </header>
-      <main class="start-wrap">
-        <div class="card">
-          <h2>Créer une session</h2>
-          <div class="row">
-            <label class="sel"><span>Forme</span>
-              <select id="shapeType">
-                <option value="auto" selected>Auto</option>
-                <option value="triangle">Triangle</option>
-                <option value="square">Carré</option>
-                <option value="hex">Hexagone</option>
-                <option value="circle">Disque</option>
-              </select>
-            </label>
-          </div>
-          <div class="row">
-            <label class="sel"><span>Difficulté</span>
-              <select id="difficulty">
-                <option value="1">Facile</option>
-                <option value="2" selected>Moyen</option>
-                <option value="3">Difficile</option>
-              </select>
-            </label>
-          </div>
-          <div class="row">
-            <button id="btnStart">Commencer</button>
-          </div>
-        </div>
-      </main>
-      <!-- <footer class="foot"></footer> -->
-    </section>
+  <!--
+    Header / titre
+    Accessible et lisible, le but est d'expliquer l'objectif de la page :
+    "Générer des représentations visuelles de fractions pour l'entraînement".
+  -->
+  <header>
+    <h1>Fractions Visuelles</h1>
+    <p>Exercices visuels de fractions — conçu pour être simple et accessible.</p>
+  </header>
 
-    <section id="screenGame" class="screen">
-      <header class="head">
-        <button id="btnBack" class="ghost">&larr; Retour</button>
-        <h1>Fractions • Figures</h1>
-        <button id="btnExitFs" class="fs-exit" aria-label="Quitter le plein écran">⤫</button>
-      </header>
-      <main class="game-wrap">
-        <section id="prompt" class="card tight"></section>
-        <section id="status" class="card tight"></section>
-        <section id="canvas" class="card grow">
-          <svg id="svg" class="svgshape" viewBox="0 0 1000 1000" aria-label="Figure cliquable"></svg>
-        </section>
-        <section class="card actions tight">
-          <!-- <button id="btnHint" class="secondary">Indice</button> -->
-          <button id="btnCheck">Valider</button>
-        </section>
-      </main>
-      <!-- <footer class="foot"></footer> -->
-    </section>
+  <!--
+    Contrôles utilisateur :
+    - select-mode : choix du mode d'affichage (secteurs / barres / points)
+    - btn-new : génère un nouvel exercice
+    Ces éléments ont des ids utilisés par app.js (initUI) pour lier les événements.
+  -->
+  <section id="controls">
+    <label for="select-mode">Mode d'affichage :</label>
+    <select id="select-mode" aria-label="Mode d'affichage">
+      <option value="sectors">Secteurs (camembert)</option>
+      <option value="bars">Barres</option>
+      <option value="dots">Points</option>
+    </select>
 
-    <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
-      <div class="modal-backdrop"></div>
-      <div class="modal-sheet" role="document">
-        <div class="modal-icon" id="modalIcon">🎉</div>
-        <h3 id="modalTitle">Bravo !</h3>
-        <p id="modalMsg">Tu as colorié exactement la fraction demandée.</p>
-        <div class="modal-actions">
-          <button id="btnClose" class="secondary">Fermer</button>
-          <button id="btnNext" class="primary">Suivant</button>
-        </div>
-      </div>
-    </div>
-  </div>
-  <script type="module" src="app.js"></script>
+    <button id="btn-new" type="button">Nouvel exercice</button>
+  </section>
+
+  <!--
+    Zone d'exercice : app.js injecte ici la représentation visuelle et le texte.
+    Id attendu : exercise-display
+    - Contient des éléments générés dynamiquement (SVG, divs).
+    - CSS applique le layout et l'accessibilité.
+  -->
+  <main id="exercise-display" role="main" aria-live="polite">
+    <!-- Contenu dynamique inséré par app.js -->
+  </main>
+
+  <footer>
+    <small>Outil pédagogique — Fractions Visuelles</small>
+  </footer>
+
+  <!-- Chargement du script principal -->
+  <!--
+    Remarque : app.js doit être placé après les éléments DOM pour que
+    l'initialisation puisse récupérer les éléments par id.
+  -->
+  <script src="app.js"></script>
 </body>
 </html>
