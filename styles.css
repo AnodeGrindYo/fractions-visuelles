@@ -1,96 +1,253 @@
-/*
- * styles.css
- * Styles pour l'application Fractions Visuelles.
- * Documentation en français :
- * - Structure générale (reset / variables)
- * - Styles des contrôles
- * - Styles des représentations (fraction-visual)
- * - Règles responsive pour petits écrans
- */
-
-/* Reset léger et variables */
-:root{
-  --main-bg: #ffffff;
-  --accent: #4caf50;
-  --muted: #f0f0f0;
-  --text: #222;
-  --max-width: 720px;
-  --gap: 12px;
-}
-
 *{box-sizing:border-box}
-body{
-  font-family: Arial, Helvetica, sans-serif;
-  color:var(--text);
-  background:var(--main-bg);
-  margin:0;
-  padding:16px;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
+:root{
+  --bg:#0e0f12; --ink:#eef1f5; --muted:#aab3c2; --card:#171922;
+  --accent:#66d9ef; --ok:#53d769; --err:#ff3b30; --den:#b7bec9;
+  --vh:1vh;
+}
+html,body{height:100%;}
+body{margin:0; background:var(--bg); color:var(--ink); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+.app{min-height:calc(var(--vh)*100); display:flex; flex-direction:column}
+.screen{display:none; min-height:calc(var(--vh)*100);}
+.screen.active{display:flex; flex-direction:column}
+.head{padding:12px max(12px, env(safe-area-inset-left)) 12px max(12px, env(safe-area-inset-right)); border-bottom:1px solid #222; background:#0a0b0e; display:flex; align-items:center; gap:12px}
+.head h1{margin:0; font-size:1.05rem; flex:1}
+.ghost{background:transparent; color:var(--ink); border:1px solid #2b3140; border-radius:10px; padding:.45rem .7rem; font-weight:700; cursor:pointer}
+.start-wrap, .game-wrap{flex:1; display:flex; flex-direction:column; gap:12px; padding:12px; padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+.card{background:var(--card); border:1px solid #262a36; border-radius:12px; padding:12px}
+.card.tight{padding:8px}
+.card.grow{flex:1; min-height:200px; display:flex; overflow:hidden}
+#canvas{display:flex; align-items:center; justify-content:center}
+.svgshape{width:100%; height:100%; max-height:65vh; display:block}
+.part{cursor:pointer; transition:fill .15s ease, opacity .15s ease}
+.part:hover{opacity:.92}
+.actions{display:flex; gap:8px; align-items:center; justify-content:flex-end}
+button{background:var(--accent); color:#081018; border:none; border-radius:10px; padding:.6rem .9rem; font-weight:700; cursor:pointer}
+button.secondary{background:#2b3140; color:var(--ink)}
+button.primary{background:var(--accent); color:#081018}
+.ok{color:var(--ok)} .err{color:var(--err)}
+.foot{padding:8px 12px; color:var(--muted); font-size:.85rem; border-top:1px solid #222}
+.sel{display:flex; gap:8px; align-items:center}
+.row{display:flex; gap:10px; align-items:center; margin:10px 0}
+.status-badges{display:flex; gap:8px; flex-wrap:wrap}
+.badge{display:inline-block; padding:.25rem .5rem; border:1px solid #2b3140; border-radius:999px; background:#0d0f15}
+.badge b{font-weight:800}
+
+/* Modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;          /* <-- centré verticalement */
+  justify-content: center;
+  z-index: 50;
+}
+.modal.show { display: flex; }
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+}
+.modal-sheet {
+  position: relative;
+  width: min(560px, 94vw);
+  margin: 0 auto;
+  background: #12141b;
+  color: var(--ink);
+  border: 1px solid #2b3140;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.5);
+}
+.modal-icon { font-size: 2rem; margin-bottom: 8px; text-align: center; }
+.modal-sheet h3 { text-align: center; margin-top: 0; }
+.modal-sheet p { text-align: center; }
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 12px;
 }
 
-/* Conteneur principal */
-header, main, footer{
-  width:100%;
-  max-width:var(--max-width);
+/* Bouton discret pour quitter le plein écran */
+.fs-exit[hidden]{ display:none; }
+.fs-exit{
+  position: fixed;
+  top: max(8px, env(safe-area-inset-top));
+  right: max(8px, env(safe-area-inset-right));
+  z-index: 60;
+  background: rgba(0,0,0,.55);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 999px;
+  padding: .35rem .5rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+.fs-exit:hover{ background: rgba(0,0,0,.7); }
+
+
+/* figure qui pulse lors d'une bonne réponse */
+@keyframes gentlePulse {
+  0% { filter: brightness(1); }
+  50% { filter: brightness(1.5); }
+  100% { filter: brightness(1); }
 }
 
-/* Contrôles */
-#controls{
-  display:flex;
-  gap:var(--gap);
-  align-items:center;
-  margin-bottom:16px;
-}
-#controls select, #controls button{
-  padding:8px 12px;
-  font-size:16px;
+.pulse-correct {
+  animation: gentlePulse 1.2s ease-in-out infinite;
 }
 
-/* Zone de l'exercice : centrée et accessible */
-#exercise-display{
-  border:1px solid #e0e0e0;
-  padding:16px;
-  border-radius:6px;
-  min-height:160px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  flex-direction:column;
-  background:#fafafa;
+
+
+
+/* === Mobile-only layout overrides === */
+@media (max-width: 768px) {
+  /* Hide title in header to save space */
+  .head h1 { display: none; }
+
+  /* Place back + exit-FS to the right of the consigne (#prompt) */
+  #prompt { position: relative; padding-right: 96px; }
+  #prompt .prompt-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-end;
+    pointer-events: auto;
+  }
+
+  /* When moved inside #prompt, exit button should not be fixed */
+  #prompt .fs-exit {
+    position: static;
+    top: auto; right: auto;
+    transform: none;
+  }
+
+  /* Make back button compact (icon-only) */
+  #btnBack {
+    min-width: auto;
+    padding: 8px 10px;
+  }
+
+  /* Move "Valider" button into the figure card, bottom-right */
+  #canvas { position: relative; }
+  #canvas #btnCheck {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    z-index: 2;
+  }
+
+  /* Hide the separate actions bar since the button is on the figure */
+  .actions { display: none; }
 }
 
-/* Classe utilisée par renderFraction pour contenants visuels */
-.fraction-visual{
-  margin-bottom:8px;
+
+/* === Mobile fine-tune: keep prompt action buttons inside card === */
+@media (max-width: 768px) {
+  #prompt {
+    position: relative;
+    /* Room for two compact circular buttons + gap + safe area */
+    padding-right: calc(max(10px, env(safe-area-inset-right)) + 72px);
+    overflow: visible; /* allow shadows to render without clipping */
+  }
+  #prompt .prompt-actions {
+    position: absolute;
+    top: 6px;
+    right: max(6px, env(safe-area-inset-right));
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-end;
+    z-index: 2;
+  }
+  /* Compact circular icon buttons inside prompt */
+  #prompt .prompt-actions button,
+  #prompt .prompt-actions .fs-exit {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    font-size: 18px;
+  }
+  /* Ensure the moved .fs-exit loses its global fixed positioning */
+  #prompt .fs-exit {
+    position: static !important;
+    top: auto; right: auto; transform: none;
+  }
+  /* Back arrow specific nudge (if font renders wide) */
+  #prompt #btnBack { min-width: 0; }
 }
 
-/* Styles pour barres et points */
-.fraction-bars .bar-cell{
-  transition: background 0.2s;
-}
-.fraction-dots .dot{
-  box-shadow: 0 0 0 1px rgba(0,0,0,0.04) inset;
+
+/* === Mobile tune v2: vertical centering + no overflow for prompt actions === */
+@media (max-width: 768px) {
+  #prompt {
+    position: relative;
+    /* space for two 26px buttons + 6px gap + safe area + breathing */
+    padding-right: calc(max(10px, env(safe-area-inset-right)) + 64px);
+  }
+  #prompt .prompt-actions {
+    position: absolute;
+    top: 50%;
+    right: max(6px, env(safe-area-inset-right));
+    transform: translateY(-50%);
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    justify-content: flex-end;
+    z-index: 3;
+  }
+  #prompt .prompt-actions button,
+  #prompt .prompt-actions .fs-exit {
+    width: 26px;
+    height: 26px;
+    padding: 0 !important;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  #prompt #btnBack { font-size: 18px; min-width: 0; }
 }
 
-/* Texte de la fraction sous la représentation */
-.fraction-text{
-  font-size: 1.1rem;
-  color:#333;
+
+/* === Mobile tune v3: reserve space for the validate button in the canvas === */
+@media (max-width: 768px) {
+  #canvas {
+    position: relative;
+    /* reserve space at the bottom-right so button doesn't overlap the figure */
+    padding-bottom: calc(56px + env(safe-area-inset-bottom));
+  }
+  #canvas #btnCheck {
+    position: absolute;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    z-index: 2;
+  }
 }
 
-/* Accessibilité : éléments cachés visuellement mais accessibles aux lecteurs d'écran */
-.sr-only{
-  position: absolute !important;
-  height: 1px; width: 1px;
-  overflow: hidden;
-  clip: rect(1px, 1px, 1px, 1px);
-  white-space: nowrap;
-}
 
-/* Responsive : réduit la taille sur petits écrans */
-@media (max-width:480px){
-  body{padding:8px}
-  #exercise-display{min-height:120px}
+/* === iOS Safari SVG animation fallback === */
+/* Some iOS versions don't animate filter on SVG. Provide an opacity fallback. */
+@supports (-webkit-touch-callout: none) {
+  .pulse-correct {
+    animation: pulseOpacity 1.1s ease-in-out infinite;
+  }
+  @keyframes pulseOpacity {
+    0% { opacity: 1; }
+    50% { opacity: .75; }
+    100% { opacity: 1; }
+  }
 }
